@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y \
     default-mysql-client \
     curl \
     netcat-openbsd \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Instala extensões PHP necessárias
@@ -67,6 +68,13 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /et
 # Cria diretório da aplicação
 WORKDIR /var/www/html
 
+# Copiar script de inicialização primeiro
+COPY init-app.sh /usr/local/bin/init-app.sh
+RUN chmod +x /usr/local/bin/init-app.sh && \
+    dos2unix /usr/local/bin/init-app.sh && \
+    ls -la /usr/local/bin/init-app.sh && \
+    file /usr/local/bin/init-app.sh
+
 # Copia arquivos de configuração
 COPY composer.json ./
 
@@ -102,10 +110,6 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/docker-php-opcache.ini 
     && echo "opcache.max_accelerated_files=4000" >> /usr/local/etc/php/conf.d/docker-php-opcache.ini \
     && echo "opcache.revalidate_freq=2" >> /usr/local/etc/php/conf.d/docker-php-opcache.ini \
     && echo "opcache.fast_shutdown=1" >> /usr/local/etc/php/conf.d/docker-php-opcache.ini
-
-# Copiar script de inicialização
-COPY docker/init-app.sh /usr/local/bin/init-app.sh
-RUN chmod +x /usr/local/bin/init-app.sh
 
 # Expõe porta 80 (Apache)
 EXPOSE 80
