@@ -1,0 +1,102 @@
+# Laravel/Lumen
+/vendor/
+/node_modules/
+/public/hot
+/public/storage
+/storage/*.key
+/.env
+/.env.local
+/.env.backup
+/.env.production
+/.env.staging
+/.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+
+# Logs
+/storage/logs/*.log
+*.log
+
+# Cache
+/bootstrap/cache/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+
+# IDE
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+/docker/apache/
+/docker/nginx/ssl/
+/docker/mysql/data/
+/docker/mongodb/data/
+
+# SSL certificates
+/ssl/
+*.pem
+*.key
+*.crt
+*.csr
+
+# Backup files
+*.backup
+*.bak
+*.tmp
+
+# Coverage reports
+/coverage/
+/clover.xml
+
+# Database
+*.sqlite
+*.db
+
+# Composer
+composer.phar
+
+# PHPUnit
+.phpunit.cache
+
+# Laravel specific
+/storage/app/*
+!/storage/app/.gitkeep
+/storage/framework/*
+!/storage/framework/.gitkeep
+/storage/logs/*
+!/storage/logs/.gitkeep
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Local configuration
+config/local.php
+config/database.local.php
+
+# Build artifacts
+/build/
+/dist/
+
+# Documentation build
+/docs/build/
+
+# Test artifacts
+/tests/_output/
+/tests/_support/_generated/

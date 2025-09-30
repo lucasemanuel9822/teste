@@ -1,0 +1,65 @@
+# Arquivos e diretórios a serem ignorados pelo Docker
+# 
+# Este arquivo define quais arquivos não devem ser copiados
+# para a imagem Docker, otimizando o build e a segurança.
+
+# Arquivos de configuração local
+.env
+.env.local
+.env.production
+.env.staging
+
+# Diretórios de dependências
+node_modules/
+vendor/
+
+# Arquivos de cache
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+storage/logs/
+bootstrap/cache/
+
+# Arquivos de teste
+tests/
+phpunit.xml
+.phpunit.result.cache
+
+# Arquivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de versionamento
+.git/
+.gitignore
+.gitattributes
+
+# Arquivos de documentação
+README.md
+CHANGELOG.md
+LICENSE
+
+# Arquivos de build
+docker-compose.yml
+docker-compose.prod.yml
+Dockerfile
+.dockerignore
+
+# Arquivos de backup
+*.bak
+*.backup
+*.sql
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+
+

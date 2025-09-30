@@ -1,0 +1,178 @@
+# Docker Compose para ambiente de homologação/staging
+#
+# Este arquivo define a configuração idêntica à produção
+# mas com configurações adequadas para testes e validação.
+
+version: "3.8"
+
+services:
+  # Aplicação PHP/Lumen
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task-management-app-staging
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+      - "8443:443"
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./ssl:/etc/ssl/certs
+    environment:
+      - APP_ENV=staging
+      - APP_DEBUG=true
+      - DB_HOST=mysql
+      - DB_DATABASE=task_management
+      - DB_USERNAME=task_app_user
+      - DB_PASSWORD=staging_password_123
+      - MONGODB_HOST=mongodb
+      - MONGODB_DATABASE=task_logs
+      - MONGODB_USERNAME=task_app_user
+      - MONGODB_PASSWORD=staging_password_123
+      - REDIS_HOST=redis
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - API_KEY=staging-api-key-123
+    depends_on:
+      - mysql
+      - mongodb
+      - redis
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Banco de dados MySQL para tarefas
+  mysql:
+    image: mysql:8.0
+    container_name: task-management-mysql-staging
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: staging_root_password_123
+      MYSQL_DATABASE: task_management
+      MYSQL_USER: task_app_user
+      MYSQL_PASSWORD: staging_password_123
+    volumes:
+      - mysql_staging_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Banco de dados MongoDB para logs
+  mongodb:
+    image: mongo:7.0
+    container_name: task-management-mongodb-staging
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: staging_admin_password_123
+      MONGO_INITDB_DATABASE: task_logs
+    volumes:
+      - mongodb_staging_data:/data/db
+      - ./docker/mongodb/init:/docker-entrypoint-initdb.d
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis para cache e filas
+  redis:
+    image: redis:7.2-alpine
+    container_name: task-management-redis-staging
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_staging_data:/data
+    command: redis-server --appendonly yes --requirepass staging_redis_password_123
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # phpMyAdmin para gerenciamento do MySQL
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: task-management-phpmyadmin-staging
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: task_app_user
+      PMA_PASSWORD: staging_password_123
+      MYSQL_ROOT_PASSWORD: staging_root_password_123
+    depends_on:
+      - mysql
+    networks:
+      - task-management-network
+
+  # MongoDB Express para gerenciamento do MongoDB
+  mongo-express:
+    image: mongo-express:latest
+    container_name: task-management-mongo-express-staging
+    restart: unless-stopped
+    ports:
+      - "8083:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: staging_admin_password_123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:staging_admin_password_123@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: staging_admin_password_123
+    depends_on:
+      - mongodb
+    networks:
+      - task-management-network
+
+  # Nginx como proxy reverso (igual à produção)
+  nginx:
+    image: nginx:alpine
+    container_name: task-management-nginx-staging
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+      - ./storage:/var/www/html/storage
+    depends_on:
+      - app
+    networks:
+      - task-management-network
+
+# Volumes para persistência de dados
+volumes:
+  mysql_staging_data:
+    driver: local
+  mongodb_staging_data:
+    driver: local
+  redis_staging_data:
+    driver: local
+
+# Rede personalizada para comunicação entre containers
+networks:
+  task-management-network:
+    driver: bridge

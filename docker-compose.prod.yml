@@ -1,0 +1,135 @@
+# Docker Compose para ambiente de produção
+#
+# Este arquivo define a configuração otimizada para produção
+# com foco em segurança, performance e escalabilidade.
+
+version: "3.8"
+
+services:
+  # Aplicação PHP/Lumen
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task-management-app-prod
+    restart: always
+    expose:
+      - "80"
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./ssl:/etc/ssl/certs
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_HOST=mysql
+      - DB_DATABASE=task_management
+      - DB_USERNAME=task_app_user
+      - DB_PASSWORD=${DB_PASSWORD}
+      - MONGODB_HOST=mongodb
+      - MONGODB_DATABASE=task_logs
+      - MONGODB_USERNAME=task_app_user
+      - MONGODB_PASSWORD=${MONGODB_PASSWORD}
+      - REDIS_HOST=redis
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - API_KEY=${API_KEY}
+    depends_on:
+      - mysql
+      - mongodb
+      - redis
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Banco de dados MySQL para tarefas
+  mysql:
+    image: mysql:8.0
+    container_name: task-management-mysql-prod
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: task_management
+      MYSQL_USER: task_app_user
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --ssl-ca=/etc/ssl/certs/ca-cert.pem --ssl-cert=/etc/ssl/certs/server-cert.pem --ssl-key=/etc/ssl/certs/server-key.pem
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Banco de dados MongoDB para logs
+  mongodb:
+    image: mongo:7.0
+    container_name: task-management-mongodb-prod
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: task_logs
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongodb/init:/docker-entrypoint-initdb.d
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis para cache e filas
+  redis:
+    image: redis:7.2-alpine
+    container_name: task-management-redis-prod
+    restart: always
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx como proxy reverso
+  nginx:
+    image: nginx:alpine
+    container_name: task-management-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+      - ./storage:/var/www/html/storage
+    depends_on:
+      - app
+    networks:
+      - task-management-network
+
+# Volumes para persistência de dados
+volumes:
+  mysql_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# Rede personalizada para comunicação entre containers
+networks:
+  task-management-network:
+    driver: bridge
