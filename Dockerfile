@@ -3,8 +3,8 @@
 # Este Dockerfile cria uma imagem otimizada para produção
 # com PHP 8.2, extensões necessárias e configurações de segurança.
 
-# Usa imagem oficial do PHP com FPM
-FROM php:8.2-fpm
+# Usa imagem oficial do PHP com Apache
+FROM php:8.2-apache
 
 # Define variáveis de ambiente
 ENV PHP_FPM_USER=www-data
@@ -26,6 +26,9 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libsasl2-dev \
     libmongoc-dev \
+    default-mysql-client \
+    curl \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Instala extensões PHP necessárias
@@ -52,8 +55,14 @@ RUN pecl install mongodb-1.21.0 \
 # Instala Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Configura PHP-FPM
-RUN sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' /usr/local/etc/php-fpm.d/www.conf
+# Configura Apache
+RUN a2enmod rewrite
+RUN echo '<Directory /var/www/html/public>' >> /etc/apache2/apache2.conf \
+    && echo '    AllowOverride All' >> /etc/apache2/apache2.conf \
+    && echo '</Directory>' >> /etc/apache2/apache2.conf
+
+# Configura DocumentRoot para Laravel/Lumen
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
 
 # Cria diretório da aplicação
 WORKDIR /var/www/html
@@ -94,10 +103,14 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/docker-php-opcache.ini 
     && echo "opcache.revalidate_freq=2" >> /usr/local/etc/php/conf.d/docker-php-opcache.ini \
     && echo "opcache.fast_shutdown=1" >> /usr/local/etc/php/conf.d/docker-php-opcache.ini
 
-# Expõe porta 9000 (PHP-FPM)
-EXPOSE 9000
+# Copiar script de inicialização
+COPY docker/init-app.sh /usr/local/bin/init-app.sh
+RUN chmod +x /usr/local/bin/init-app.sh
+
+# Expõe porta 80 (Apache)
+EXPOSE 80
 
 # Comando de inicialização
-CMD ["php-fpm"]
+CMD ["/usr/local/bin/init-app.sh"]
 
 

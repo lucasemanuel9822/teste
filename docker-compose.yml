@@ -6,6 +6,16 @@
 version: "3.8"
 
 services:
+  # Gerador de certificados SSL
+  ssl-generator:
+    build:
+      context: ./ssl
+      dockerfile: Dockerfile.ssl
+    container_name: ssl-generator
+    volumes:
+      - ./ssl:/ssl/output
+    command: sh -c "./generate-ssl.sh && cp *.pem /ssl/output/ && tail -f /dev/null"
+
   # Aplicação PHP/Lumen
   app:
     build:
@@ -14,7 +24,7 @@ services:
     container_name: task-management-app
     restart: unless-stopped
     expose:
-      - "9000"
+      - "80"
     volumes:
       - .:/var/www/html
       - ./storage:/var/www/html/storage
@@ -46,11 +56,14 @@ services:
     restart: unless-stopped
     ports:
       - "8000:80"
+      - "8443:443"
     volumes:
       - ./docker/nginx/nginx-dev.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl:ro
       - .:/var/www/html
     depends_on:
       - app
+      - ssl-generator
     networks:
       - task-management-network
 
@@ -62,10 +75,10 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root_password_123
-      MYSQL_DATABASE: task_management
-      MYSQL_USER: task_app_user
-      MYSQL_PASSWORD: secure_password_123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-task_management}
+      MYSQL_USER: ${MYSQL_USER:-task_app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secure_password_123}
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init:/docker-entrypoint-initdb.d
@@ -81,9 +94,9 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin_password_123
-      MONGO_INITDB_DATABASE: task_logs
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-admin_password_123}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-task_logs}
     volumes:
       - mongodb_data:/data/db
       - ./docker/mongodb/init:/docker-entrypoint-initdb.d
@@ -99,7 +112,7 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
     networks:
       - task-management-network
 

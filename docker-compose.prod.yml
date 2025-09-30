@@ -17,7 +17,6 @@ services:
       - "80"
     volumes:
       - ./storage:/var/www/html/storage
-      - ./ssl:/etc/ssl/certs
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
@@ -30,6 +29,7 @@ services:
       - MONGODB_USERNAME=task_app_user
       - MONGODB_PASSWORD=${MONGODB_PASSWORD}
       - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-123}
       - CACHE_DRIVER=redis
       - QUEUE_CONNECTION=redis
       - API_KEY=${API_KEY}
@@ -51,14 +51,14 @@ services:
     container_name: task-management-mysql-prod
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: task_management
-      MYSQL_USER: task_app_user
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password_123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-task_management}
+      MYSQL_USER: ${MYSQL_USER:-task_app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secure_password_123}
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init:/docker-entrypoint-initdb.d
-    command: --default-authentication-plugin=mysql_native_password --ssl-ca=/etc/ssl/certs/ca-cert.pem --ssl-cert=/etc/ssl/certs/server-cert.pem --ssl-key=/etc/ssl/certs/server-key.pem
+    command: --default-authentication-plugin=mysql_native_password
     networks:
       - task-management-network
     healthcheck:
@@ -73,9 +73,9 @@ services:
     container_name: task-management-mongodb-prod
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: task_logs
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-admin_password_123}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-task_logs}
     volumes:
       - mongodb_data:/data/db
       - ./docker/mongodb/init:/docker-entrypoint-initdb.d
@@ -94,7 +94,7 @@ services:
     restart: always
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
     networks:
       - task-management-network
     healthcheck:

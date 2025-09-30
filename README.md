@@ -72,25 +72,30 @@ DB_PASSWORD=sua-senha-mysql-aqui
 # Database MongoDB
 MONGODB_PASSWORD=sua-senha-mongodb-aqui
 
+# Cache & Queue Redis
+REDIS_PASSWORD=sua-senha-redis-aqui
+```
 
 ### 3. Execute com Docker Compose
+
+#### Produção (Recomendado)
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
 
 #### Desenvolvimento
 ```bash
 docker-compose up -d
 ```
 
-#### Produção
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
+### 4. Verificação
 
-### 4. Execute as migrações
+Após o setup, acesse:
+- **API**: http://localhost
+- **Health Check**: http://localhost/health
+- **Documentação**: http://localhost/swagger.html
 
-```bash
-docker-compose exec app php artisan migrate
-docker-compose exec app php artisan db:seed
-```
+> **Nota**: O container da aplicação executa automaticamente as migrations, configura permissões e aguarda todos os serviços ficarem prontos.
 
 ## 🚀 Uso da API
 
@@ -304,19 +309,12 @@ docker-compose exec redis redis-cli flushall
 cp env.example .env.production
 ```
 
-### 2. Configure SSL/TLS
-```bash
-# Coloque seus certificados em docker/nginx/ssl/
-cp cert.pem docker/nginx/ssl/
-cp key.pem docker/nginx/ssl/
-```
-
-### 3. Execute em produção
+### 2. Execute em produção
 ```bash
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### 4. Configure backup
+### 3. Configure backup
 ```bash
 # Backup do MySQL
 docker-compose exec mysql mysqldump -u root -p task_management > backup.sql
